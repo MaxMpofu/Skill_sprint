@@ -73,3 +73,5 @@ loading of choice).
   last-commit time on submit. A production version could poll on a
   schedule or use GitHub webhooks to track ongoing activity through the
   week, matching the "automatic build tracking" idea from the pitch.
+  <img width="1472" height="860" alt="image" src="https://github.com/user-attachments/assets/8c6f4c71-f736-498f-b48d-4b2335e7ad57" />
+
