@@ -75,3 +75,28 @@ loading of choice).
   week, matching the "automatic build tracking" idea from the pitch.
   <img width="1472" height="860" alt="image" src="https://github.com/user-attachments/assets/8c6f4c71-f736-498f-b48d-4b2335e7ad57" />
 
+Here's how the pieces fit together:
+
+Entry point
+
+app.py — the front door. It shows the login/signup form, checks credentials against database.py, and once logged in, stores the user in st.session_state (Streamlit's session memory) and shows the active brief on the home screen.
+
+The four pages (Streamlit auto-detects anything in pages/ and adds it to the sidebar nav)
+
+pages/1_This_Weeks_Brief.py — shows the current brief to everyone. If you're logged in as a lecturer, it also shows the "Generate & publish new weekly brief" button, which calls ai_engine.py.
+pages/2_Submit_Project.py — students only. Takes a GitHub link + write-up, calls github_sync.py to sanity-check the repo exists, then saves it via database.py.
+pages/3_Leaderboard.py — pulls the ranked, scored submissions from database.py and displays them with medals for the top three.
+pages/4_Lecturer_Judging.py — lecturers only. Lists submissions with no score yet, and the creativity/functionality/code-quality sliders write scores back through database.py.
+
+The three logic modules (no Streamlit imports — these are pure Python, which is why seed_demo.py can call database.py directly without spinning up a web server)
+
+database.py — the only file that touches SQLite. Every other file reads/writes data by calling functions here (create_user, get_active_brief, submit_score, leaderboard_for_brief, etc.) rather than writing raw SQL themselves. This is the seam you'd change first to move to Postgres.
+ai_engine.py — one function, generate_weekly_brief(). If OPENAI_API_KEY is set in your environment, it calls OpenAI; otherwise it picks from a small offline pool. Either way it returns the same shape of dict, so the caller doesn't care which path ran.
+github_sync.py — one function, fetch_repo_info(). Hits the public GitHub API to confirm a repo exists and grab its last commit time. Fails soft — if GitHub is unreachable, the submission still saves, just with a warning.
+
+Support files:
+
+seed_demo.py — a standalone script (run once, separately from the app) that creates demo accounts and a few pre-scored submissions so the leaderboard isn't empty on first run.
+requirements.txt, .env.example, README.md — dependencies, the optional API keys, and setup instructions.
+
+The flow for a real user action, e.g. a student submitting a project: 2_Submit_Project.py collects the form input → calls github_sync.py to validate the link → calls database.py to save it → 4_Lecturer_Judging.py later reads that same row back out through database.py to score it → 3_Leaderboard.py reads the scored result. database.py is the hub everything else talks through; nothing else touches SQLite directly.
